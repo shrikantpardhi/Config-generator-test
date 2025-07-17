@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { ChevronRight, Download, Home } from "lucide-react"
+import { ChevronRight, Download, Home, AlertCircle } from "lucide-react"
 import { ConfigEditor } from "@/components/config-editor"
 import { generateZip } from "@/lib/zip-generator"
 
@@ -96,39 +96,51 @@ export default function MicroserviceDetails() {
   const [config, setConfig] = useState<ConfigData | null>(null)
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<string>("")
+  const [isExporting, setIsExporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load microservice data
-    const stored = localStorage.getItem("microservices")
-    if (stored) {
-      const services = JSON.parse(stored)
-      const service = services.find((s: Microservice) => s.id === serviceId)
-      setMicroservice(service || null)
-    }
+    try {
+      // Load microservice data
+      const stored = localStorage.getItem("microservices")
+      if (stored) {
+        const services = JSON.parse(stored)
+        const service = services.find((s: Microservice) => s.id === serviceId)
+        setMicroservice(service || null)
+      }
 
-    // Load config data
-    const configKey = `config-${serviceId}`
-    const storedConfig = localStorage.getItem(configKey)
-    if (storedConfig) {
-      const configData = JSON.parse(storedConfig)
-      setConfig(configData)
-      setActiveTab(configData.tabs[0] || "")
-    } else if (sampleConfigs[serviceId]) {
-      setConfig(sampleConfigs[serviceId])
-      setActiveTab(sampleConfigs[serviceId].tabs[0] || "")
-      localStorage.setItem(configKey, JSON.stringify(sampleConfigs[serviceId]))
+      // Load config data
+      const configKey = `config-${serviceId}`
+      const storedConfig = localStorage.getItem(configKey)
+      if (storedConfig) {
+        const configData = JSON.parse(storedConfig)
+        setConfig(configData)
+        setActiveTab(configData.tabs[0] || "")
+      } else if (sampleConfigs[serviceId]) {
+        setConfig(sampleConfigs[serviceId])
+        setActiveTab(sampleConfigs[serviceId].tabs[0] || "")
+        localStorage.setItem(configKey, JSON.stringify(sampleConfigs[serviceId]))
+      }
+    } catch (err) {
+      console.error("Error loading microservice data:", err)
+      setError("Failed to load microservice data")
     }
   }, [serviceId])
 
   const handleConfigUpdate = (tabName: string, newConfig: Record<string, any>) => {
     if (!config) return
 
-    const updatedConfig = {
-      ...config,
-      [tabName]: newConfig,
+    try {
+      const updatedConfig = {
+        ...config,
+        [tabName]: newConfig,
+      }
+      setConfig(updatedConfig)
+      localStorage.setItem(`config-${serviceId}`, JSON.stringify(updatedConfig))
+    } catch (err) {
+      console.error("Error updating config:", err)
+      setError("Failed to update configuration")
     }
-    setConfig(updatedConfig)
-    localStorage.setItem(`config-${serviceId}`, JSON.stringify(updatedConfig))
   }
 
   const handleEnvironmentToggle = (env: string) => {
@@ -138,7 +150,31 @@ export default function MicroserviceDetails() {
   const handleExportZip = async () => {
     if (!config || selectedEnvironments.length === 0) return
 
-    await generateZip(config, selectedEnvironments, microservice?.name || serviceId)
+    setIsExporting(true)
+    setError(null)
+
+    try {
+      await generateZip(config, selectedEnvironments, microservice?.name || serviceId)
+    } catch (err) {
+      console.error("Export error:", err)
+      setError("Failed to generate ZIP file. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600">{error}</p>
+          <Button asChild className="mt-4">
+            <Link href="/">Back to Dashboard</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (!microservice || !config) {
@@ -268,9 +304,13 @@ export default function MicroserviceDetails() {
 
             <Separator />
 
-            <Button onClick={handleExportZip} disabled={selectedEnvironments.length === 0} className="w-full sm:w-auto">
+            <Button
+              onClick={handleExportZip}
+              disabled={selectedEnvironments.length === 0 || isExporting}
+              className="w-full sm:w-auto"
+            >
               <Download className="h-4 w-4 mr-2" />
-              Generate Config ZIP
+              {isExporting ? "Generating..." : "Generate Config ZIP"}
             </Button>
           </div>
         </CardContent>

@@ -31,6 +31,7 @@ export function ConfigEditor({ tabName, config, onConfigUpdate }: ConfigEditorPr
       })
       setYamlPreview(yamlString)
     } catch (error) {
+      console.error("Error generating YAML:", error)
       setYamlPreview("# Error generating YAML preview")
     }
   }, [localConfig])
@@ -42,7 +43,7 @@ export function ConfigEditor({ tabName, config, onConfigUpdate }: ConfigEditorPr
     let parsedValue: any = value
     if (value === "true") parsedValue = true
     else if (value === "false") parsedValue = false
-    else if (!isNaN(Number(value)) && value !== "") parsedValue = Number(value)
+    else if (!isNaN(Number(value)) && value !== "" && value.trim() !== "") parsedValue = Number(value)
 
     newConfig[key] = parsedValue
     setLocalConfig(newConfig)
@@ -64,7 +65,7 @@ export function ConfigEditor({ tabName, config, onConfigUpdate }: ConfigEditorPr
   }
 
   const handleKeyChange = (oldKey: string, newKey: string) => {
-    if (newKey === oldKey || newKey in localConfig) return
+    if (newKey === oldKey || newKey in localConfig || newKey.trim() === "") return
 
     const newConfig = { ...localConfig }
     newConfig[newKey] = newConfig[oldKey]
@@ -137,7 +138,9 @@ export function ConfigEditor({ tabName, config, onConfigUpdate }: ConfigEditorPr
           <CardTitle className="text-lg">YAML Preview</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="bg-gray-50 p-4 rounded-md text-sm font-mono overflow-auto max-h-96 border">{yamlPreview}</pre>
+          <pre className="bg-gray-50 p-4 rounded-md text-sm font-mono overflow-auto max-h-96 border whitespace-pre-wrap">
+            {yamlPreview}
+          </pre>
         </CardContent>
       </Card>
     </div>

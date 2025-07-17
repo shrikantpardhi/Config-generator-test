@@ -6,27 +6,34 @@ interface ConfigData {
   [key: string]: any
 }
 
-export async function generateZip(config: ConfigData, environments: string[], serviceName: string) {
+export async function generateZip(config: ConfigData, environments: string[], serviceName: string): Promise<void> {
+  if (!config || !environments.length || !serviceName) {
+    throw new Error("Invalid parameters for ZIP generation")
+  }
+
   const zip = new JSZip()
 
-  // Create configuration object without the tabs array
-  const configObject = { ...config }
-  delete configObject.tabs
-
-  // Generate YAML content
-  const yamlContent = yaml.dump(configObject, {
-    indent: 2,
-    lineWidth: -1,
-    noRefs: true,
-  })
-
-  // Add config.yaml to each selected environment folder
-  environments.forEach((env) => {
-    zip.folder(env)?.file("config.yaml", yamlContent)
-  })
-
-  // Generate and download the ZIP file
   try {
+    // Create configuration object without the tabs array
+    const configObject = { ...config }
+    delete configObject.tabs
+
+    // Generate YAML content
+    const yamlContent = yaml.dump(configObject, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+    })
+
+    // Add config.yaml to each selected environment folder
+    environments.forEach((env) => {
+      const folder = zip.folder(env)
+      if (folder) {
+        folder.file("config.yaml", yamlContent)
+      }
+    })
+
+    // Generate and download the ZIP file
     const content = await zip.generateAsync({ type: "blob" })
     const url = window.URL.createObjectURL(content)
     const link = document.createElement("a")
@@ -38,6 +45,6 @@ export async function generateZip(config: ConfigData, environments: string[], se
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error("Error generating ZIP file:", error)
-    alert("Error generating ZIP file. Please try again.")
+    throw new Error("Failed to generate ZIP file. Please try again.")
   }
 }
