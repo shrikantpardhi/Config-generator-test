@@ -244,6 +244,7 @@ export default function MicroserviceDetails() {
   const [config, setConfig] = useState<ConfigFile | null>(null)
   // selectedEnvironments will store Environment enum values (DEV, UAT, PROD, etc.)
   const [selectedEnvironments, setSelectedEnvironments] = useState<Environment[]>([])
+  const [enabledTabs, setEnabledTabs] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<ConfigTabType | string>("") // Use ConfigTabType for activeTab
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -286,6 +287,12 @@ export default function MicroserviceDetails() {
         const configData: ConfigFile = JSON.parse(storedConfig)
         setConfig(configData)
         // Set first tab as active, ensuring it's a valid ConfigTabType
+        // Initialize enabled tabs state, defaulting all to true
+        const initialEnabledState = configData.tabs.reduce((acc, tabName) => {
+          acc[tabName] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+        setEnabledTabs(initialEnabledState);
         setActiveTab(configData.tabs[0] || "")
       } else {
         setError(`Configuration for microservice "${serviceId}" not found.`)
@@ -311,6 +318,13 @@ export default function MicroserviceDetails() {
       setError("Failed to update configuration.")
     }
   }
+
+  const handleTabEnabledChange = (tabName: ConfigTabType, isEnabled: boolean) => {
+    setEnabledTabs((prev) => ({
+      ...prev,
+      [tabName]: isEnabled,
+    }));
+  };
 
   const handleEnvironmentToggle = (env: Environment) => {
     setSelectedEnvironments((prev) =>
@@ -470,6 +484,8 @@ export default function MicroserviceDetails() {
                       tabName={tab}
                       config={config[tab] || {}}
                       onConfigUpdate={(newConfig) => handleConfigUpdate(tab, newConfig)}
+                      isEnabled={enabledTabs[tab] ?? true}
+                      onEnabledChange={(isEnabled) => handleTabEnabledChange(tab, isEnabled)}
                     />
                   </TabsContent>
                 ))}
