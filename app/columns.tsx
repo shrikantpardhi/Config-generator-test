@@ -52,8 +52,10 @@ export const getMicroserviceColumns = (
       header: "Name",
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.original.name}</span>
-          <span className="text-xs text-gray-500">{row.original.id}</span>
+          
+          <Link href={`/microservice/${row.original.id}`} className="flex gap-2 items-center"><span className="font-medium">{row.original.name}</span></Link>
+            
+          {/* <span className="text-xs text-gray-500">{row.original.id}</span> */}
         </div>
       ),
       size: 200,
